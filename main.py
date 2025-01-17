@@ -22,12 +22,12 @@ import numpy as np
 from docx import Document
 
 ## List Contract types and file paths - name the variable the contract type and equal it to its template filepath.
-contracts = {'test contract': "./test_contract_blank.docx",}
+contracts = {'NDA': "./PresentDayProduction Mutual NDA.docx"}
 
 
 
 ## Add the variable name of each contract type to list options.
-options = ['test contract']
+options = ['NDA']
 
 class bcolors:
     """
@@ -49,8 +49,8 @@ class bcolors:
 
 ## Add to dictionary additional questions you'd like to be asked during creation of contract.
 questions = {'Q1': f"{bcolors.QUESTION}What contract type would you like to create?{bcolors.ENDC}",
-             'Q2': f'\n{bcolors.QUESTION}What is recipients name?{bcolors.ENDC}',
-             'Q3': f"\n{bcolors.QUESTION}What is recipients address?{bcolors.ACTION}"
+             'Q2': f'\n{bcolors.QUESTION}What is the recipients name?{bcolors.ENDC}',
+             'Q3': f"\n{bcolors.QUESTION}What is the recipients address?{bcolors.ACTION}"
                    f"\nPlease {bcolors.UNDERLINE}use '//' at the end of the address{bcolors.ENDC}{bcolors.ACTION} "
                    f"to signal you have finished inputting the address.{bcolors.ENDC}\n",}
 
