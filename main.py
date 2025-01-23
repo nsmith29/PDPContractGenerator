@@ -30,6 +30,8 @@ contracts = {'NDA': "./PresentDayProduction Mutual NDA.docx"}
 ## Add the variable name of each contract type to list options.
 options = ['NDA']
 
+
+
 class bcolors:
     """
         Colours to be used for command line messages and for user inputs upon run of python file.
@@ -48,6 +50,8 @@ class bcolors:
     ITALIC = '\033[3m'
     UNDERLINE = '\033[4m'
 
+
+
 ## Add to dictionary additional questions you'd like to be asked during creation of contract.
 ## I'm sure they'll be questions to ask which are specific to each contract type. Use key names for them in format of
 ##              'Q{contract type}{number of question for type}' i.e QNDA1
@@ -62,6 +66,8 @@ questions = {'Q1': f"{bcolors.QUESTION}What contract type would you like to crea
              'QNDA1':f"\n{bcolors.QUESTION}What information does each party agree to disclose?{bcolors.ENDC}",
              'QNDA2':f"\n{bcolors.QUESTION}How long will this NDA be put in place for?{bcolors.ENDC}"}
 
+
+
 class ErrMessages:
     @staticmethod
     def ValueErrorYorN():
@@ -70,6 +76,8 @@ class ErrMessages:
                    f"{bcolors.INFO}.{bcolors.ACTION} Try again. {bcolors.ENDC}")
         # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
         print(text)
+
+
     @staticmethod
     def ValueErrorlist():
         """
@@ -84,6 +92,8 @@ class ErrMessages:
                    +f"{bcolors.ENDC}")
         # pass text & lock to function to print each line of error slowly when lock is next unreleased & available.
         print(text)
+
+
 
 def checkinput(func):
     """
@@ -121,8 +131,12 @@ def checkinput(func):
                 # trigger error informing user that they've given an input which is invalid.
                 eval("ErrMessages.ValueError{}()".format(typ))
                 A = ask_question(Q, typ, ans)
+
         return A
+
     return wrapper
+
+
 
 @checkinput
 def ask_question(Q: str, typ: str, ans: list = None):
@@ -163,10 +177,12 @@ def ask_question(Q: str, typ: str, ans: list = None):
                 A.append(a)
             elif '//' in a:
                 a = a.replace('//','')
-                print(a)
                 A.append(a)
                 end = True
+
     return A
+
+
 
 class program:
     """
@@ -203,7 +219,7 @@ class program:
         document = Document(contracts[self.contype[0]])
 
         # record of lines in document as a list
-        lines = [x.text for x in document.paragraphs]
+        lines = self.updatelines(document)  # [x.text for x in document.paragraphs]
 
         # search array of lines for line index for full line containing date.
         idx4date = np.argwhere(np.asarray(lines) == 'Date: ')[0][0]
@@ -217,47 +233,31 @@ class program:
             document, lines = self.forcompany(lines, document)
 
         document, lines = eval("self.for{}(lines, document)".format(self.contype[0]))
-
         newfilename = "".join(['./',self.contype[0],'_for_', self.repname, '_',self.condate.replace('/','_'),'.docx'])
         document.save(newfilename)
 
         return newfilename
 
+
     def forNDA(self, lines, document):
-        # find line containing "insert detail ..."
-        detailsline, idx4details = self.findlineandindex('[insert details e.g. discussing the possibility of the parties '
-                                                         'entering into a joint venture]', lines)
-        # replace "insert details" with additional[0]
-        detailsline = detailsline.replace('[insert details e.g. discussing the possibility of the parties '
-                                          'entering into a joint venture]', self.additional[0])
-        # replace line containing "insert details" in document
-        document.paragraphs[idx4details].text = detailsline
-        # update lines
-        lines = [x.text for x in document.paragraphs]
-        # find line containing "for number years"
-        timeline, idx4time = self.findlineandindex('[indefinitely][for [insert number]', lines)
-        # replace "for number years" with additional[1]
-        timeline = timeline.replace('[indefinitely][for [insert number]',f'for {self.additional[1]}')
-        # replace line containing "for number years" in document
-        document.paragraphs[idx4time].text = timeline
-        # update lines
-        lines = [x.text for x in document.paragraphs]
+        # get line & index of "insert detail ...", replace with additional[0] & replace doc line. Update lines.
+        document, lines = self.linereplace(document, *self.repvarchange('[insert details e.g. discussing the possibility'
+                                                     ' of the parties entering into a joint venture]', lines,
+                                                                        self.additional[0]))
+
+        # get line & index of "for number years", replace with additional[1] & replace doc line. Update lines.
+        document, lines = self.linereplace(document, *self.repvarchange('[indefinitely][for [insert number]', lines,
+                                                                       f'for {self.additional[1]}'))
 
         return document, lines
 
     def forindividual(self, lines, document):
-        # get line replacement for name and index of line to replace
-        nameline, idx4name = self.repnamechange('[NAME OF INDIVIDUAL]', lines)
-        # replace line containing name in document
-        document.paragraphs[idx4name].text = nameline
-        # update lines
-        lines = [x.text for x in document.paragraphs]
-        # get line replacement for address and index of line to replace
-        addline, idx4add = self.repaddchange('[address of individual]', lines)
-        # replace line containing address in document
-        document.paragraphs[idx4add].text = addline
-        # update lines
-        lines = [x.text for x in document.paragraphs]
+        # get line replacement for name, index of line to replace & replace line in document. Update lines.
+        document, lines = self.linereplace(document, *self.repnamechange('[NAME OF INDIVIDUAL]', lines))
+
+        # get line replacement for address, index of line to replace & replace line in document.
+        document, lines = self.linereplace(document, *self.repaddchange('[address of individual]', lines))
+
         # removal of lines which are associated with the contract being for a company
         document, lines = self.remove(document, 'OR', lines)
         document, lines = self.remove(document, '[NAME OF COMPANY]', lines)
@@ -265,47 +265,58 @@ class program:
         return document, lines
 
     def forcompany(self, lines,  document):
-        # get line replacement for name and index of line to replace
-        nameline, idx4name = self.repnamechange('[NAME OF COMPANY]', lines)
-        # replace line containing name in document
-        document.paragraphs[idx4name].text = nameline
-        # update lines
-        lines = [x.text for x in document.paragraphs]
-        # get line replacement for address and index of line to replace
-        addline, idx4add = self.repaddchange('[ADDRESS]', lines)
-        # replace line containing address in document
-        document.paragraphs[idx4add].text = addline
-        # update lines
-        lines = [x.text for x in document.paragraphs]
-        # find line containing '[COUNTRY]'
-        countryline, idx4country = self.findlineandindex('[COUNTRY]', lines)
-        # replace '[COUNTRY]' with repcountry
-        countryline = countryline.replace('[COUNTRY]', self.repcountry)
-        # replace line containing country in document
-        document.paragraphs[idx4country].text = countryline
-        # update lines
-        lines = [x.text for x in document.paragraphs]
+        # get line replacement for name, index of line to replace & replace line in document. Update lines.
+        document, lines = self.linereplace(document, *self.repnamechange('[NAME OF COMPANY]', lines))
+
+        # get line replacement for address, index of line to replace & replace line in document. Update lines.
+        document, lines = self.linereplace(document, *self.repaddchange('[ADDRESS]', lines))
+
+        # get line replacement for '[COUNTRY]', index of line to replace & replace line in document. Update lines.
+        document, lines = self.linereplace(document, *self.repvarchange('[COUNTRY]', lines,self.repcountry))
+
         # removal of lines which are associated with the contract being for an individual
         document, lines = self.remove(document, '[NAME OF INDIVIDUAL]', lines)
         document, lines = self.remove(document, 'OR', lines)
 
         return document, lines
 
-    def remove(self, document, strg, lines):
-        line, inx2remove = self.findlineandindex(strg, lines)
-        document.paragraphs[inx2remove].clear()
-        lines  = [x.text for x in document.paragraphs]
+
+    def linereplace(self, document, varline, idx4var):
+        # replace line containing name in document
+        document.paragraphs[idx4var].text = varline
+        # update lines
+        lines = self.updatelines(document)
 
         return document, lines
 
 
-    def repnamechange(self, strg, lines):
-        # find line containing strg and index of line.
-        nameline, idx4name = self.findlineandindex(strg, lines)
-        # replace strg within line with repname.
-        nameline = nameline.replace(strg, self.repname)
+    def remove(self, document, strg, lines):
+        # find line contain strg wanting to be removed
+        line, inx2remove = self.findlineandindex(strg, lines)
+        # clear the paragraph line within document
+        document.paragraphs[inx2remove].clear()
+        # update lines
+        lines  = self.updatelines(document)
 
-        return nameline, idx4name
+        return document, lines
+
+
+    def updatelines(self, document):
+
+        return [x.text for x in document.paragraphs]
+
+
+    def repnamechange(self, strg, lines):
+
+        return self.repvarchange(strg, lines, self.repname)
+
+
+    def repvarchange(self, strg, lines, var):
+        varlines, idx4lines = self.findlineandindex(strg, lines)
+        varlines = self.repvarreplacement(varlines, strg, var)
+
+        return varlines, idx4lines
+
 
     def repaddchange(self, strg, lines):
         # find line containing strg and index of line.
@@ -318,9 +329,16 @@ class program:
                 self.repadd = ", ".join(self.repadd)
         else:
             self.repadd = self.repadd[0]
-        addline = addline.replace(strg, self.repadd)
+        addline = self.repvarreplacement(addline, strg, self.repadd)
 
         return addline, idx4add
+
+
+    def repvarreplacement(self, varline, strg, var):
+
+        # replace strg within line with var.
+        return varline.replace(strg, var)
+
 
     def findlineandindex(self, strg, lines):
         # find total line containing strg in lines.
@@ -329,6 +347,8 @@ class program:
         idx4add = np.argwhere(np.asarray(lines) == line)[0][0]
 
         return line, idx4add
+
+
 
 if __name__ =='__main__':
     program()
